@@ -17,3 +17,4 @@ im2=np.array(Image.open("C:/Users/lomiag/PycharmProjects/Mask_RCNN/images/250228
 im_arr=np.array([im1,im2])
 nn.mode="inference"
 nn.detect(im_arr)
+#
