@@ -1,24 +1,90 @@
-from mrcnn import visualize, utils, model, config, parallel_model
-from PIL import Image
+from matplotlib import pyplot as plt
+import gluon
+from gluoncv import model_zoo, data, utils
+from PIL import Image, ImageTk
 import numpy as np
-import cv2
-conf=config.Config()
-conf.NUM_CLASSES=81
-conf.BATCH_SIZE=6
-print(conf.BATCH_SIZE)
-mode="training"
-nn=model.MaskRCNN(mode,conf,"C:/Users/lomiag/PycharmProjects/Mask_RCNN_new\My_Project")
+import scipy.misc
+import imageio
+import mxnet
+import tkinter as tk
 
-nn.build(mode,conf)
-nn.load_weights("C:/Users/lomiag/PycharmProjects/Mask_RCNN_new/mask_rcnn_coco.h5")
 
-im1=np.array(Image.open("C:/Users/lomiag/PycharmProjects/Mask_RCNN/images/2383514521_1fc8d7b0de_z.jpg"))/255
-im2=np.array(Image.open("C:/Users/lomiag/PycharmProjects/Mask_RCNN/images/2502287818_41e4b0c4fb_z.jpg"))/255
-im3=np.array(Image.open("C:/Users/lomiag/PycharmProjects/Mask_RCNN_new/images/7933423348_c30bd9bd4e_z.jpg"))/255
-im4=np.array(Image.open("C:/Users/lomiag/PycharmProjects/Mask_RCNN_new/images/9118579087_f9ffa19e63_z.jpg"))/255
-im5=np.array(Image.open("C:/Users/lomiag/PycharmProjects/Mask_RCNN_new/images/8053677163_d4c8f416be_z.jpg"))/255
-im6=np.array(Image.open("C:/Users/lomiag/PycharmProjects/Mask_RCNN_new/images/9247489789_132c0d534a_z.jpg"))/255
-im_arr=np.array([im1,im2,im3,im4,im5,im6])
-nn.mode="inference"
-print(im1)
-nn.detect(im1)
+class Segmentor:
+    def __init__(self, mask=True, bboxes=False, model_name='mask_rcnn_resnet50_v1b_coco'):
+        self.mask = mask
+        self.bboxes = bboxes
+        self.net = model_zoo.get_model(model_name, pretrained=True)
+        self.mask = None
+        self.im = None
+
+    def read_im(self, path):
+        x, orig_img = data.transforms.presets.rcnn.load_test(path)
+
+        return x, orig_img
+
+    def segment(self, x, orig_img):
+        """
+        Segments the picture.
+        """
+        ids, scores, bboxes, masks = [xx[0].asnumpy() for xx in self.net(x)]
+        # paint segmentation mask on images directly
+        width, height = orig_img.shape[1], orig_img.shape[0]
+        # Expand the mask onto the image
+        masks = utils.viz.expand_mask(masks, bboxes, (width, height), scores)
+        # Plot the mask onto the image
+        orig_img = utils.viz.plot_mask(orig_img, masks)
+        self.mask = masks
+        self.im = orig_img
+
+    def create_im_with_mask(self):
+        """
+        Plots the segmented image.
+        """
+
+        ax = utils.viz.plot_mask(self.im, self.mask)
+        return ax
+
+    def plot_mask(self,ax):
+        fig = plt.figure(figsize=(15, 15))
+        ax = fig.add_subplot(1, 1, 1)
+        plt.imshow(ax)
+        plt.show()
+
+class GUI:
+    def __init__(self):
+        pass
+
+    def buildGUI(self,root):
+        """
+
+        :param root: The root of the tkinter
+        :return: None
+        """
+        self.root = tk.Tk()
+        im = Image.open("images/logo.png")
+        photo = ImageTk.PhotoImage(im)
+
+        label = tk.Label(root, image=photo)
+        label.image = photo  # keep a reference!
+        label.pack()
+        label.place(x=600, y=5)
+
+        self.ModelVizFrame = tk.Frame(root, width=950, height=500, background="bisque")
+        self.ModelVizFrame.pack()
+        self.ModelVizFrame.place(x=40, y=160)
+
+
+im_dir_path="C:/Users/lomiag/PycharmProjects/Mask_RCNN_new/images/"
+im_name="3132016470_c27baa00e8_z.jpg"
+
+full_im_path=im_dir_path+im_name
+seg=Segmentor()
+
+x,im=seg.read_im(full_im_path)
+seg.segment(x,im)
+masked_im=seg.create_im_with_mask()
+
+
+fig2 = plt.figure(figsize=(15, 15))
+plt.imshow(Image.open(full_im_path))
+plt.show()
